@@ -1,0 +1,20 @@
+{
+  "name": "@xlnc/pricing-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xlnc/shared": "0.1.0",
+    "@xlnc/hostify-adapter": "0.1.0",
+    "@xlnc/pricelabs-adapter": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,60 @@
+databases:
+  - name: xlnc-postgres
+    databaseName: xlnc_platform
+    user: xlnc
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: xlnc-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: xlnc-postgres
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: xlnc-postgres
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: xlnc-postgres
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: xlnc-postgres
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: xlnc-postgres
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: HOSTIFY_API_KEY
+        sync: false
+      - key: PRICELABS_API_KEY
+        sync: false
+
+  - type: web
+    name: xlnc-web
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: API_URL
+        value: https://xlnc-api.onrender.com
+      - key: DEFAULT_PROPERTY_ID
+        value: '1001'

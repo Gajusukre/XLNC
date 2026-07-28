@@ -1,0 +1,406 @@
+{
+  "name": "XLNC - Daily Pricing Sync",
+  "nodes": [
+    {
+      "id": "4a9fbb09-2a49-471f-b784-d9c417afe1bb",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3c7a2489-6f3b-4245-b402-e3e9d2f84d26",
+      "name": "Compute Date Range",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d87f52cf-4466-408b-887f-135dc117505b",
+              "name": "fromDate",
+              "type": "string",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}"
+            },
+            {
+              "id": "f58549a6-196f-414a-9a03-1c8f417ac5ea",
+              "name": "toDate",
+              "type": "string",
+              "value": "={{ $now.plus({ days: 7 }).toFormat('yyyy-MM-dd') }}"
+            },
+            {
+              "id": "3ff6d0bf-47dc-4e3e-bdcd-672b9fdd6609",
+              "name": "reservationToDate",
+              "type": "string",
+              "value": "={{ $now.plus({ days: 30 }).toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4aa9ffe9-919f-4f71-96cb-58694c6df571",
+      "name": "Login (Service Account)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.XLNC_API_URL }}/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $env.XLNC_SYNC_EMAIL, password: $env.XLNC_SYNC_PASSWORD }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "9871299d-bdd1-4477-8211-f75bbef2357b",
+      "name": "Sync Properties",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.XLNC_API_URL }}/sync/properties",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $node['Login (Service Account)'].json.accessToken }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ca65f91b-57f0-435b-82d9-b81cdf5c4c41",
+      "name": "Get Properties",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.XLNC_API_URL }}/properties",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $node['Login (Service Account)'].json.accessToken }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1167705c-e6c1-42e3-ad97-02f88c35b4ac",
+      "name": "Split Properties",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "fieldToSplitOut": "properties",
+        "options": {}
+      }
+    },
+    {
+      "id": "d43565f6-d464-445a-8f7e-c3329f22d983",
+      "name": "Sync Reservations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.XLNC_API_URL + '/sync/' + $json.id + '/reservations' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "={{ $('Compute Date Range').item.json.fromDate }}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Compute Date Range').item.json.reservationToDate }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Login (Service Account)').item.json.accessToken }}"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          },
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b429db74-d63d-478e-8001-5520aa700e7e",
+      "name": "Get Pricing Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.XLNC_API_URL + '/pricing/' + $json.id + '/recommendations' }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "={{ $('Compute Date Range').item.json.fromDate }}"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('Compute Date Range').item.json.toDate }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Login (Service Account)').item.json.accessToken }}"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "0ce9c26f-bead-439a-83ad-e8cbb2fcb891",
+      "name": "Was Persisted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "3dcabfbe-e6b7-4d7e-9d7e-e4c3253b511e",
+              "leftValue": "={{ $json.persisted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "2ff299ae-d39b-4c3a-a254-683de73119d8",
+      "name": "Success (No-Op)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        220
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "84488d63-2f8e-43f5-95b5-7b48347484bd",
+      "name": "Persistence Failed (No-Op \u2014 wire real alerting here)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        380
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Compute Date Range",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Date Range": {
+      "main": [
+        [
+          {
+            "node": "Login (Service Account)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login (Service Account)": {
+      "main": [
+        [
+          {
+            "node": "Sync Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Properties": {
+      "main": [
+        [
+          {
+            "node": "Get Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Properties": {
+      "main": [
+        [
+          {
+            "node": "Split Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Properties": {
+      "main": [
+        [
+          {
+            "node": "Sync Reservations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Reservations": {
+      "main": [
+        [
+          {
+            "node": "Get Pricing Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pricing Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Was Persisted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Persisted?": {
+      "main": [
+        [
+          {
+            "node": "Success (No-Op)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persistence Failed (No-Op \u2014 wire real alerting here)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "timezone": "America/Los_Angeles"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

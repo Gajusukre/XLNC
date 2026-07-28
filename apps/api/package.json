@@ -1,0 +1,33 @@
+{
+  "name": "@xlnc/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xlnc/shared": "0.1.0",
+    "@xlnc/hostify-adapter": "0.1.0",
+    "@xlnc/pricelabs-adapter": "0.1.0",
+    "@xlnc/pricing-engine": "0.1.0",
+    "@xlnc/database": "0.1.0",
+    "express": "^4.19.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/supertest": "^6.0.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
+    "supertest": "^7.0.0",
+    "tsx": "^4.16.2",
+    "vitest": "^4.1.10",
+    "typescript": "^5.5.4"
+  }
+}

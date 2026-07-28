@@ -1,0 +1,23 @@
+{
+  "name": "@xlnc/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b tsconfig.json && npm run copy-migrations",
+    "copy-migrations": "mkdir -p dist/migrations && cp src/migrations/*.sql dist/migrations/",
+    "test": "vitest run",
+    "migrate": "node dist/run-migrations-cli.js"
+  },
+  "dependencies": {
+    "@xlnc/shared": "0.1.0",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.6",
+    "@xlnc/hostify-adapter": "0.1.0",
+    "vitest": "^4.1.10",
+    "typescript": "^5.5.4"
+  }
+}
